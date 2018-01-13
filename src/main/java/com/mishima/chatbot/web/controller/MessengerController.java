@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -46,8 +45,12 @@ public class MessengerController {
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST)
-    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) {
+    public ResponseEntity<String> handleCallback(@RequestBody final Map<String,Object> payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) throws Exception {
         LOGGER.info("Received request -> {} with signature -> {}", payload, signature);
+        if("page".equals(payload.get("object"))) {
+
+        }
+
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
