@@ -43,12 +43,8 @@ public class MessengerController {
 
     @ResponseBody
     @RequestMapping(path = "/", method = RequestMethod.POST)
-    public ResponseEntity<String> process(@RequestBody(required = false) final Map<String,Object> payload) {
+    public ResponseEntity<String> process(@RequestBody final String payload) {
         LOGGER.info("Received request -> {}", payload);
-        if( "page".equals(payload.get("object"))) {
-
-
-        }
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
