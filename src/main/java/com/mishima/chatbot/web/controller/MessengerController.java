@@ -12,7 +12,8 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import java.util.Map;
 
-@Controller
+@RestController
+@RequestMapping("/callback")
 public class MessengerController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessengerController.class);
@@ -23,11 +24,13 @@ public class MessengerController {
     @Value("#{environment.PAGE_ACCESS_TOKEN}")
     private String pageAccessToken;
 
+    private static final String SIGNATURE_HEADER_NAME = "X-Hub-Signature";
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     @ResponseBody
-    @RequestMapping(path = "/", method = RequestMethod.GET)
-    public ResponseEntity<String> validate(@RequestParam(value="hub.mode", required = false) final String hubMode,
+    @RequestMapping(method = RequestMethod.GET)
+    public ResponseEntity<String> verify(@RequestParam(value="hub.mode", required = false) final String hubMode,
                                            @RequestParam(value="hub.challenge", required = false) final String hubChallenge,
                                            @RequestParam(value="hub.verify_token", required = false) final String hubVerifyToken) {
         if("subscribe".equals(hubMode)) {
@@ -42,9 +45,9 @@ public class MessengerController {
     }
 
     @ResponseBody
-    @RequestMapping(path = "/", method = RequestMethod.POST)
-    public ResponseEntity<String> process(@RequestBody final String payload) {
-        LOGGER.info("Received request -> {}", payload);
+    @RequestMapping(method = RequestMethod.POST)
+    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) {
+        LOGGER.info("Received request -> {} with signature -> {}", payload, signature);
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
