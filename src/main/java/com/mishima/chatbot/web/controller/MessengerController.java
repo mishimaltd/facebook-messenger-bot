@@ -42,8 +42,8 @@ public class MessengerController {
     }
 
     @ResponseBody
-    @RequestMapping(path = "/", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> process(@RequestBody final Map<String,Object> payload) {
+    @RequestMapping(path = "/", method = RequestMethod.POST)
+    public ResponseEntity<String> process(@RequestBody(required = false) final Map<String,Object> payload) {
         LOGGER.info("Received request -> {}", payload);
         if( "page".equals(payload.get("object"))) {
 
