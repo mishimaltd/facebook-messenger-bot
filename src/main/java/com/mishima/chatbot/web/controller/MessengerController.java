@@ -13,7 +13,7 @@ import javax.json.JsonObject;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/callback")
+@RequestMapping("/")
 public class MessengerController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessengerController.class);
