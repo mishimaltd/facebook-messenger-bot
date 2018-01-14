@@ -1,6 +1,5 @@
 package com.mishima.chatbot.web.controller;
 
-import com.google.common.base.Charsets;
 import flexjson.JSONDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,8 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URLEncoder;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -50,20 +50,24 @@ public class MessengerController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST)
     @SuppressWarnings("unchecked")
-    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) throws Exception {
+    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) {
         LOGGER.info("Received request -> {} with signature -> {}", payload, signature);
         Map<String,Object> request = jsonDeserializer.deserialize(payload);
         if("page".equals(request.get("object"))) {
             List<Map<String,Object>> messageEntries = (List<Map<String,Object>>)request.get("entry");
             for(Map<String,Object> messageEntry: messageEntries) {
                 List<Map<String,Object>> messages = (List<Map<String,Object>>)messageEntry.get("messaging");
-                for(Map<String,Object> message: messages ) {
-                    Map<String,Object> senderDetails = (Map<String,Object>)message.get("sender");
-                    String senderId = (String)senderDetails.get("id");
-                    Map<String,Object> messageDetails = (Map<String,Object>)message.get("message");
-                    String text = (String)messageDetails.get("text");
-                    LOGGER.info("Received message {} from sender {}", text, senderId);
-                    sendMessage(senderId, "Thanks very much!!!");
+                if( messages != null ) {
+                    for(Map<String,Object> message: messages ) {
+                        Map<String, Object> senderDetails = (Map<String, Object>) message.get("sender");
+                        String senderId = (String) senderDetails.get("id");
+                        Map<String, Object> messageDetails = (Map<String, Object>) message.get("message");
+                        if (messageDetails != null) {
+                            String text = (String) messageDetails.get("text");
+                            LOGGER.info("Received message {} from sender {}", text, senderId);
+                            sendMessage(senderId, "Thanks very much!!!");
+                        }
+                    }
                 }
             }
 
@@ -72,14 +76,15 @@ public class MessengerController {
     }
 
 
-    private void sendMessage(String recipientId, String text) throws Exception {
+    private void sendMessage(String recipientId, String text) {
         LOGGER.info("Sending message {} to recipient {}", text, recipientId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
-        final String url = String.format("https://graph.facebook.com/v2.6/me/messages?access_token=%s&recipient={\"id:\":\"%s\"}&message={\"text:\":\"%s\"}",pageAccessToken, recipientId, URLEncoder.encode(text, "utf-8"));
-        LOGGER.info("Generated url -> {}" + url);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        final String url = String.format("https://graph.facebook.com/v2.6/me/messages?access_token=%s&recipient={\"id:\":\"%s\"}&message={\"text:\":\"%s\"}",pageAccessToken, recipientId, text);
+        URI uri = UriComponentsBuilder.fromUriString(url).build().encode().toUri();
+        LOGGER.info("Generated uri -> {}" + uri);
+        ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
         LOGGER.info("Received response code {}, message {}", response.getStatusCode(), response.getBody());
     }
 
