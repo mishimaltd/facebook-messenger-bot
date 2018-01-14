@@ -1,22 +1,17 @@
 package com.mishima.chatbot.web.controller;
 
+import com.mishima.chatbot.service.FacebookService;
 import flexjson.JSONDeserializer;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -26,15 +21,13 @@ public class MessengerController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessengerController.class);
 
+    @Autowired
+    private FacebookService facebookService;
+
     @Value("#{environment.VERIFY_TOKEN}")
     private String verifyToken;
 
-    @Value("#{environment.PAGE_ACCESS_TOKEN}")
-    private String pageAccessToken;
-
     private static final String SIGNATURE_HEADER_NAME = "X-Hub-Signature";
-
-    private final CloseableHttpClient httpclient = HttpClients.createDefault();
 
     private final JSONDeserializer<Map<String,Object>> jsonDeserializer = new JSONDeserializer<>();
 
@@ -76,7 +69,8 @@ public class MessengerController {
                                 LOGGER.info("Received echo of message {} from sender {}", text, senderId);
                             } else {
                                 LOGGER.info("Received new message {} from sender {}", text, senderId);
-                                sendMessage(senderId, String.format("The time is now %s", new DateTime(DateTimeZone.UTC)));
+                                Map<String,Object> person = facebookService.person(senderId);
+                                facebookService.sendMessage(senderId, String.format("Hello %s!!", person.get("first_name")));
                             }
                         }
                     }
@@ -87,21 +81,4 @@ public class MessengerController {
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
-    private void sendMessage(String recipientId, String text) throws Exception {
-        LOGGER.info("Sending message {} to recipient {}", text, recipientId);
-        URI uri = new URIBuilder()
-                .setScheme("https")
-                .setHost("graph.facebook.com")
-                .setPath("/v2.6/me/messages")
-                .setParameter("access_token", pageAccessToken)
-                .setParameter("recipient", String.format("{'id':'%s'}", recipientId))
-                .setParameter("message", String.format("{'text':'%s'}", text))
-                .build();
-        HttpPost post = new HttpPost(uri);
-        post.setHeader("content-type", "application/json");
-        try (CloseableHttpResponse response = httpclient.execute(post)) {
-            StatusLine statusLine = response.getStatusLine();
-            LOGGER.info("Received response code {}, reason {}", statusLine.getStatusCode(), statusLine.getReasonPhrase());
-        }
-    }
 }
