@@ -1,5 +1,7 @@
 package com.mishima.chatbot.web.controller;
 
+import flexjson.JSONDeserializer;
+import flexjson.JSONSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -7,9 +9,10 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import javax.json.Json;
-import javax.json.JsonObject;
+import java.util.List;
 import java.util.Map;
+
+import static com.google.common.collect.Maps.newHashMap;
 
 @RestController
 @RequestMapping("/")
@@ -26,6 +29,9 @@ public class MessengerController {
     private static final String SIGNATURE_HEADER_NAME = "X-Hub-Signature";
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    private final JSONDeserializer<Map<String,Object>> jsonDeserializer = new JSONDeserializer<>();
+    private final JSONSerializer jsonSerializer = new JSONSerializer();
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET)
@@ -45,25 +51,42 @@ public class MessengerController {
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST)
-    public ResponseEntity<String> handleCallback(@RequestBody final Map<String,Object> payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) throws Exception {
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) throws Exception {
         LOGGER.info("Received request -> {} with signature -> {}", payload, signature);
-        if("page".equals(payload.get("object"))) {
+        Map<String,Object> request = jsonDeserializer.deserialize(payload);
+        if("page".equals(request.get("object"))) {
+            List<Map<String,Object>> messageEntries = (List<Map<String,Object>>)request.get("entry");
+            for(Map<String,Object> messageEntry: messageEntries) {
+                List<Map<String,Object>> messages = (List<Map<String,Object>>)messageEntry.get("messaging");
+                for(Map<String,Object> message: messages ) {
+                    Map<String,Object> senderDetails = (Map<String,Object>)message.get("sender");
+                    String senderId = (String)senderDetails.get("id");
+                    Map<String,Object> messageDetails = (Map<String,Object>)message.get("message");
+                    String text = (String)messageDetails.get("text");
+                    LOGGER.info("Received message {} from sender {}", text, senderId);
+                    sendMessage(senderId, "Thanks very much!!!");
+                }
+            }
 
         }
-
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
 
-    private void sendMessage(String recipientId, String message) {
-        LOGGER.info("Sending message {} to recipient {}", message, recipientId);
-        JsonObject json = Json.createObjectBuilder()
-                .add("recipient", Json.createObjectBuilder().add("id", recipientId).build())
-                .add("message", Json.createObjectBuilder().add("text", message).build())
-                .build();
+    private void sendMessage(String recipientId, String text) {
+        LOGGER.info("Sending message {} to recipient {}", text, recipientId);
+        Map<String,Object> recipientDetails = newHashMap();
+        recipientDetails.put("id", recipientId);
+        Map<String,Object> messageDetails = newHashMap();
+        messageDetails.put("text", text);
+        Map<String,Object> body = newHashMap();
+        body.put("recipient", recipientDetails);
+        body.put("message", messageDetails);
+        String json = jsonSerializer.serialize(body);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(json.toString(), headers);
+        HttpEntity<String> entity = new HttpEntity<>(json, headers);
         ResponseEntity<String> response = restTemplate.exchange("https://graph.facebook.com/v2.6/me/messages?access_token={}", HttpMethod.POST, entity, String.class, pageAccessToken);
         LOGGER.info("Received response code {}, message {}", response.getStatusCode(), response.getBody());
     }
