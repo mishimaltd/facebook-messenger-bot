@@ -7,6 +7,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -72,10 +74,9 @@ public class MessengerController {
                             Boolean isEcho = (Boolean)messageDetails.get("is_echo");
                             if( isEcho != null && isEcho) {
                                 LOGGER.info("Received echo of message {} from sender {}", text, senderId);
-                                continue;
                             } else {
                                 LOGGER.info("Received new message {} from sender {}", text, senderId);
-                                sendMessage(senderId, "Thanks very much!!!");
+                                sendMessage(senderId, String.format("The time is now %s", new DateTime(DateTimeZone.UTC)));
                             }
                         }
                     }
