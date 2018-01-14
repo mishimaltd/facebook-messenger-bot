@@ -1,7 +1,7 @@
 package com.mishima.chatbot.web.controller;
 
+import com.google.common.base.Charsets;
 import flexjson.JSONDeserializer;
-import flexjson.JSONSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,10 +9,9 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
-
-import static com.google.common.collect.Maps.newHashMap;
 
 @RestController
 @RequestMapping("/")
@@ -31,7 +30,6 @@ public class MessengerController {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private final JSONDeserializer<Map<String,Object>> jsonDeserializer = new JSONDeserializer<>();
-    private final JSONSerializer jsonSerializer = new JSONSerializer();
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET)
@@ -74,21 +72,15 @@ public class MessengerController {
     }
 
 
-    private void sendMessage(String recipientId, String text) {
+    private void sendMessage(String recipientId, String text) throws Exception {
         LOGGER.info("Sending message {} to recipient {}", text, recipientId);
-        Map<String,Object> recipientDetails = newHashMap();
-        recipientDetails.put("id", recipientId);
-        Map<String,Object> messageDetails = newHashMap();
-        messageDetails.put("text", text);
-        Map<String,Object> body = newHashMap();
-        body.put("messaging_type", "RESPONSE");
-        body.put("recipient", recipientDetails);
-        body.put("message", messageDetails);
-        String json = jsonSerializer.serialize(body);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(json, headers);
-        ResponseEntity<String> response = restTemplate.exchange("https://graph.facebook.com/v2.6/me/messages?access_token={}", HttpMethod.POST, entity, String.class, pageAccessToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        final String requestBody = URLEncoder.encode(String.format("?access_token=%s&recipient={\"id:\":\"%s\"}&message={\"text:\":\"%s\"}", pageAccessToken, recipientId, text), Charsets.UTF_8.name());
+        final String url = "https://graph.facebook.com/v2.6/me/messages" + requestBody;
+        LOGGER.info("Generated url -> {}" + url);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
         LOGGER.info("Received response code {}, message {}", response.getStatusCode(), response.getBody());
     }
 
