@@ -10,6 +10,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +51,7 @@ public class MessengerController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST)
     @SuppressWarnings("unchecked")
-    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) {
+    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) throws Exception {
         LOGGER.info("Received request -> {} with signature -> {}", payload, signature);
         Map<String,Object> request = jsonDeserializer.deserialize(payload);
         if("page".equals(request.get("object"))) {
@@ -76,14 +77,14 @@ public class MessengerController {
     }
 
 
-    private void sendMessage(String recipientId, String text) {
+    private void sendMessage(String recipientId, String text) throws Exception {
         LOGGER.info("Sending message {} to recipient {}", text, recipientId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
-        final String url = String.format("https://graph.facebook.com/v2.6/me/messages?access_token=%s&recipient={\"id:\":\"%s\"}&message={\"text:\":\"%s\"}",pageAccessToken, recipientId, text);
-        URI uri = UriComponentsBuilder.fromUriString(url).build().encode().toUri();
-        LOGGER.info("Generated uri -> {}" + uri);
+        final String url = String.format("https://graph.facebook.com/v2.6/me/messages?access_token=%s&recipient={\"id:\":\"%s\"}&message={\"text:\":\"%s\"}",pageAccessToken, recipientId, URLEncoder.encode(text, "utf-8"));
+        URI uri = UriComponentsBuilder.fromUriString(url).build().toUri();
+        LOGGER.info("Generated uri -> {}",uri);
         ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
         LOGGER.info("Received response code {}, message {}", response.getStatusCode(), response.getBody());
     }
