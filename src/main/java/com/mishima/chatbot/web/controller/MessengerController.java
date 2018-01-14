@@ -69,8 +69,14 @@ public class MessengerController {
                         Map<String, Object> messageDetails = (Map<String, Object>) message.get("message");
                         if (messageDetails != null) {
                             String text = (String) messageDetails.get("text");
-                            LOGGER.info("Received message {} from sender {}", text, senderId);
-                            sendMessage(senderId, "Thanks very much!!!");
+                            Boolean isEcho = (Boolean)messageDetails.get("is_echo");
+                            if( isEcho != null && isEcho) {
+                                LOGGER.info("Received echo of message {} from sender {}", text, senderId);
+                                continue;
+                            } else {
+                                LOGGER.info("Received new message {} from sender {}", text, senderId);
+                                sendMessage(senderId, "Thanks very much!!!");
+                            }
                         }
                     }
                 }
