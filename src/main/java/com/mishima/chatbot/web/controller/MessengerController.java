@@ -80,7 +80,6 @@ public class MessengerController {
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
-
     private void sendMessage(String recipientId, String text) throws Exception {
         LOGGER.info("Sending message {} to recipient {}", text, recipientId);
         URI uri = new URIBuilder()
@@ -98,5 +97,4 @@ public class MessengerController {
             LOGGER.info("Received response code {}, reason {}", statusLine.getStatusCode(), statusLine.getReasonPhrase());
         }
     }
-
 }
