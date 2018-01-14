@@ -81,6 +81,7 @@ public class MessengerController {
         Map<String,Object> messageDetails = newHashMap();
         messageDetails.put("text", text);
         Map<String,Object> body = newHashMap();
+        body.put("messaging_type", "RESPONSE");
         body.put("recipient", recipientDetails);
         body.put("message", messageDetails);
         String json = jsonSerializer.serialize(body);
