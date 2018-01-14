@@ -1,13 +1,18 @@
 package com.mishima.chatbot.web.controller;
 
 import flexjson.JSONDeserializer;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
@@ -27,7 +32,7 @@ public class MessengerController {
 
     private static final String SIGNATURE_HEADER_NAME = "X-Hub-Signature";
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final CloseableHttpClient httpclient = HttpClients.createDefault();
 
     private final JSONDeserializer<Map<String,Object>> jsonDeserializer = new JSONDeserializer<>();
 
@@ -50,7 +55,7 @@ public class MessengerController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST)
     @SuppressWarnings("unchecked")
-    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) {
+    public ResponseEntity<String> handleCallback(@RequestBody final String payload, @RequestHeader(SIGNATURE_HEADER_NAME) final String signature) throws Exception {
         LOGGER.info("Received request -> {} with signature -> {}", payload, signature);
         Map<String,Object> request = jsonDeserializer.deserialize(payload);
         if("page".equals(request.get("object"))) {
@@ -76,16 +81,22 @@ public class MessengerController {
     }
 
 
-    private void sendMessage(String recipientId, String text) {
+    private void sendMessage(String recipientId, String text) throws Exception {
         LOGGER.info("Sending message {} to recipient {}", text, recipientId);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        String url = "https://graph.facebook.com/v2.6/me/messages?access_token={}%recipient={}&message={}";
-        String recipient = String.format("{'id':'%s'}", recipientId);
-        String message = String.format("{'text':'%s'}", text);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class, pageAccessToken, recipient, message);
-        LOGGER.info("Received response code {}, message {}", response.getStatusCode(), response.getBody());
+        URI uri = new URIBuilder()
+                .setScheme("https")
+                .setHost("graph.facebook.com")
+                .setPath("/v2.6/me/messages")
+                .setParameter("access_token", pageAccessToken)
+                .setParameter("recipient", String.format("{'id':'%s'}", recipientId))
+                .setParameter("message", String.format("{'text':'%s'}", text))
+                .build();
+        HttpPost post = new HttpPost(uri);
+        post.setHeader("content-type", "application/json");
+        try (CloseableHttpResponse response = httpclient.execute(post)) {
+            StatusLine statusLine = response.getStatusLine();
+            LOGGER.info("Received response code {}, reason {}", statusLine.getStatusCode(), statusLine.getReasonPhrase());
+        }
     }
 
 }
