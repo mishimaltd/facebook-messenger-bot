@@ -81,13 +81,10 @@ public class MessengerController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
-        URI uri = UriComponentsBuilder.fromUriString("https://graph.facebook.com/v2.6/me/messages")
-                .queryParam("access_token", pageAccessToken)
-                .queryParam("recipient", String.format("{'id':'%s'}", recipientId))
-                .queryParam("message", String.format("{'text':'%s'}", text))
-                .build().toUri();
-        LOGGER.info("Generated uri -> {}",uri);
-        ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
+        String url = "https://graph.facebook.com/v2.6/me/messages?access_token={}%recipient={}&message={}";
+        String recipient = String.format("{'id':'%s'}", recipientId);
+        String message = String.format("{'text':'%s'}", text);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class, pageAccessToken, recipient, message);
         LOGGER.info("Received response code {}, message {}", response.getStatusCode(), response.getBody());
     }
 
